@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if true;  // Public profiles
+      allow create, update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      // Extended profile data
+      match /private/{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Recommendations collection
+    match /recommendations/{recommendationId} {
+      function isRecipient() {
+        return isAuthenticated() && request.auth.uid == resource.data.recipient.id;
+      }
+      
+      function isAuthor() {
+        return isAuthenticated() && request.auth.uid == resource.data.author.id;
+      }
+
+      allow read: if true;  // Public recommendations
+      allow create: if isAuthenticated();
+      allow update: if isRecipient() || (isAuthor() && resource.data.status == 'pending');
+      allow delete: if isAuthor() && resource.data.status == 'pending';
+    }
+  }
+}

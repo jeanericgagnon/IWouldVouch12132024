@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  name          String
+  password      String?
+  avatar        String?
+  bio           String?
+  title         String?
+  location      String?
+  linkedin      String?
+  skills        Skill[]
+  resumeUrl     String?
+  portfolioItems PortfolioItem[]
+  referencesGiven Reference[] @relation("ReferenceGiver")
+  referencesReceived Reference[] @relation("ReferenceReceiver")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Skill {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // 'soft' or 'hard'
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name, type])
+}
+
+model PortfolioItem {
+  id        String   @id @default(uuid())
+  type      String
+  name      String
+  url       String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Reference {
+  id          String   @id @default(uuid())
+  fromUserId  String
+  toUserId    String
+  fromUser    User     @relation("ReferenceGiver", fields: [fromUserId], references: [id])
+  toUser      User     @relation("ReferenceReceiver", fields: [toUserId], references: [id])
+  relationship Json    // Stores type, company, and duration
+  endorsement String
+  skills      Json    // Array of skill objects
+  status      String   @default("pending") // pending, approved, rejected
+  rating      Int
+  examples    Json?   // Optional examples with attachments
+  additionalSections Json? // Optional additional sections
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([fromUserId])
+  @@index([toUserId])
+}
